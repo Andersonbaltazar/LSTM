@@ -50,9 +50,9 @@ class TrainingConfig:
     results_path: str = "lstm_stacked_final_results.json"
     cache_path: str = "lstm_stacked_final_SUCCESS.npz"
 
-    x_path: str = "X_features.npy"
-    y_path: str = "Y_user.npy"
-    mask_path: str = "M_mask.npy"
+    x_path: str = "Task2_Preprocesado/X_features.npy"
+    y_path: str = "Task2_Preprocesado/Y_user.npy"
+    mask_path: str = "Task2_Preprocesado/M_mask.npy"
 
 
 # =============================================================================

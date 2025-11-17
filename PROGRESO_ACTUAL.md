@@ -138,9 +138,98 @@ Con margin=0.1, el modelo es "demasiado permisivo" y no aprende bien la diferenc
 
 ---
 
-## 📁 ARCHIVOS CRÍTICOS LISTOS PARA PRODUCCIÓN
+## 📁 ESTRUCTURA DE ARCHIVOS DEL PROYECTO
 
-### 3 Archivos Esenciales:
+### ARCHIVOS QUE EXISTEN ACTUALMENTE (5 en raíz + 3 en Task2_Preprocesado)
+
+#### En raíz (c:\Users\user\Downloads\Dataset\):
+```
+✓ train_proper.py              (15 KB)    - Script principal de entrenamiento mejorado
+✓ signature_training.py        (8 KB)     - Módulo con clases y funciones de apoyo
+✓ DOCUMENTACION.md             (35 KB)    - Documentación completa (9 secciones)
+✓ PROGRESO_ACTUAL.md           (6 KB)     - Este archivo (progreso y plan)
+✓ normalization_params.json    (1.5 KB)  - Parámetros μ y σ para Z-Score (VALIDADO)
+```
+
+#### En Task2_Preprocesado/ (datos limpios):
+```
+✓ X_features.npy               (5.08 MB)  - 1600 firmas × 208 puntos × 4 features
+✓ Y_user.npy                   (12 KB)    - Etiquetas de usuario (1-40)
+✓ M_mask.npy                   (4.88 MB)  - Máscaras de padding para secuencias
+```
+
+### ¿Para qué sirve cada archivo?
+
+| Archivo | Propósito | Estado |
+|---------|-----------|--------|
+| **train_proper.py** | Script que ejecuta el entrenamiento con parámetros mejorados | ✓ Listo para usar |
+| **signature_training.py** | Importado por train_proper.py, contiene TrainingConfig y funciones | ✓ Necesario |
+| **DOCUMENTACION.md** | Referencia técnica completa (LSTM, Triplet Loss, EER, etc) | ✓ Completo |
+| **PROGRESO_ACTUAL.md** | Registro de problemas, soluciones y plan de ejecución | ✓ Actualizado |
+| **normalization_params.json** | Parámetros para normalizar datos en producción | ✓ VALIDADO |
+| **X_features.npy** | Datos de entrenamiento (1600 firmas limpias, 0 NaN) | ✓ Verificado |
+| **Y_user.npy** | Etiquetas que indican usuario de cada firma (1-40) | ✓ Verificado |
+| **M_mask.npy** | Máscaras que indican dónde termina cada firma | ✓ Verificado |
+
+### ARCHIVOS QUE SE CREARÁN AL EJECUTAR train_proper.py
+
+Cuando termine el entrenamiento (180 épocas ≈ 2-3 horas), se generarán automáticamente:
+
+#### 1. **embedding_network_final.h5** (CRÍTICO)
+```
+Tamaño esperado: ~702 KB
+Contenido: Modelo LSTM entrenado listo para usar en producción
+Propósito: Cargar y generar embeddings de nuevas firmas
+Cómo se crea: model.save() al final del entrenamiento
+```
+
+#### 2. **lstm_stacked_final_results.json** (CRÍTICO)
+```
+Tamaño esperado: ~1-2 KB
+Contenido: Métricas y configuración del entrenamiento
+Estructura: {
+  "test_metrics": {
+    "eer": X.XX%,           ← MÉTRICA CLAVE (esperado <15%)
+    "threshold": 0.XXX,     ← Para decisión genuina/falsa
+    "genuine_mean": 0.XXX,  ← Distancia promedio genuinas
+    "impostor_mean": 0.XXX, ← Distancia promedio falsas
+    "separation": 0.XXX     ← Qué tan bien separadas
+  },
+  "config": { ... },        ← Parámetros usados
+  "epochs": 180,
+  "margin": 0.5,
+  "model_params": 167040
+}
+Propósito: Verificar si EER < 15% (cumple requisito)
+```
+
+#### 3. **lstm_stacked_final_SUCCESS.npz** (Apoyo)
+```
+Tamaño esperado: ~3.2 MB
+Contenido: Embeddings y etiquetas de train/val/test
+Propósito: Análisis posterior, debugging, visualización
+Cómo se crea: np.savez_compressed() al final del entrenamiento
+```
+
+#### 4. **logs/training_log.txt** (Opcional)
+```
+Información: Puede contener logs de TensorFlow durante entrenamiento
+```
+
+### ARCHIVOS ELIMINADOS (por obsoletos)
+
+Los siguientes scripts fueron eliminados durante la limpieza:
+- `train_final_model.py` - Original (causó EER 40.29%)
+- `train_improved_model.py` - Tenía errores de tensor
+- `diagnostic_analysis.py` - Para análisis (trabajo completado)
+- `verify_params.py` - Para verificación (trabajo completado)
+- `__pycache__/*.pyc` - Archivos compilados de Python (caché)
+
+---
+
+## 📁 ARCHIVOS CRÍTICOS PARA PRODUCCIÓN
+
+### 3 Archivos Esenciales (se crearán al entrenar):
 1. **embedding_network_final.h5** (702 KB)
    - Modelo LSTM entrenado
    - Listo para inferencia
@@ -168,29 +257,74 @@ Con margin=0.1, el modelo es "demasiado permisivo" y no aprende bien la diferenc
 
 ---
 
-## 🎯 PRÓXIMOS PASOS PARA MAÑANA
+## 🎯 PRÓXIMOS PASOS - EJECUCIÓN DEL ENTRENAMIENTO
 
-### URGENTE - Opción 1: Entrenar con Parámetros Mejorados
-```
-Script: train_proper.py (ya existe, solo ejecutar)
-Cambios:
-- Margin: 0.5 (aumentado)
-- Learning Rate: 0.01 (mayor)
-- Epochs: 200 (más tiempo para convergencia)
-- Método: GradientTape (backpropagation real)
-
-Expected: EER debería bajar a ~15-20%
+### PASO 1: Ejecutar Entrenamiento
+```powershell
+cd "c:\Users\user\Downloads\Dataset"
+python train_proper.py
 ```
 
-### Alternativa - Opción 2: Usar Siamese Network
-Si Triplet Loss sigue sin funcionar bien:
-- Cambiar a Siamese Network + Contrastive Loss
-- Más simple, mejor documentado, probado
+**Qué sucederá:**
+- Cargará datos desde `Task2_Preprocesado/`
+- Entrenará 180 épocas (verás progreso cada 12 épocas)
+- Cada época procesa 240 batches × 64 firmas
+- Tiempo estimado: 2-3 horas
+- Mostará: "Epoch XXX/180 - train_loss: X.XXX - val_loss: X.XXX"
 
-### Alternativa - Opción 3: Transfer Learning
-- Usar modelo preentrenado (e.g., ResNet50)
-- Fine-tune en datos de firmas
-- Generalmente converge mejor
+### PASO 2: Archivos que se Generarán (Automático)
+Al terminar el entrenamiento, se crearán 3 archivos:
+1. `embedding_network_final.h5` - Modelo entrenado (702 KB)
+2. `lstm_stacked_final_results.json` - Métricas y EER
+3. `lstm_stacked_final_SUCCESS.npz` - Embeddings de test (3.2 MB)
+
+### PASO 3: Verificar EER (Métrica Clave)
+Después que termine, revisar `lstm_stacked_final_results.json`:
+```powershell
+type lstm_stacked_final_results.json
+```
+
+Buscar el valor de `"eer"` en test_metrics:
+```json
+"test_metrics": {
+  "eer": 0.10,           ← Si es < 0.15 (15%), ✓ CUMPLE
+  "threshold": 0.45,
+  "genuine_mean": 0.35,
+  "impostor_mean": 0.85,
+  "separation": 0.50
+}
+```
+
+### PASO 4: Interpretación de Resultados
+
+**Escenario A: EER < 0.15 (15%) ✓ ÉXITO**
+```
+→ Modelo cumple requisito
+→ 3 archivos listos para producción:
+   1. embedding_network_final.h5
+   2. lstm_stacked_final_results.json
+   3. normalization_params.json (ya existe)
+```
+
+**Escenario B: EER ≥ 0.15 (15%) ✗ NECESITA AJUSTE**
+```
+→ Aumentar parámetros:
+   - margin: 0.5 → 0.7
+   - learning_rate: 0.01 → 0.015
+   - epochs: 180 → 200
+→ Ejecutar nuevamente train_proper.py
+```
+
+### PASO 5: Si Necesitas Ajustar Parámetros
+Editar `train_proper.py`:
+```python
+config = TrainingConfig(
+    epochs=200,              # ← Más épocas
+    margin=0.7,             # ← Margen más grande
+    learning_rate=0.015,    # ← LR más agresivo
+    ...
+)
+```
 
 ---
 

@@ -1,4 +1,3 @@
-%%writefile /content/sample_data/signature_training.py
 import json
 import numpy as np
 import tensorflow as tf
